@@ -50,9 +50,14 @@ async function captureAndUpload(url) {
   const zoom = 2;
   const scale = 2.5;      // reduced memory usage
 
-  const now = new Date();
-  const fileName = `${now.getHours()}-${now.getMinutes()}-${now.getDate()}-${now.getMonth() + 1}.png`;
-  const filePath = path.join("/tmp", fileName);
+const now = new Date();
+
+// Convert to IST
+const istTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+
+const fileName = `${istTime.getHours()}-${istTime.getMinutes()}-${istTime.getDate()}-${istTime.getMonth() + 1}.png`;
+
+    const filePath = path.join("/tmp", fileName);
 
   let browser;
 
