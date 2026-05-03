@@ -1,0 +1,19 @@
+{
+  "name": "snapshot-app",
+  "version": "1.0.0",
+  "description": "Scheduled screenshot capture and upload to Google Drive",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "npx puppeteer browsers install chrome"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "googleapis": "^171.4.0",
+    "node-cron": "^4.2.1",
+    "puppeteer": "^21.0.0"
+  }
+}
