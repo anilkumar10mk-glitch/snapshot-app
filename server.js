@@ -43,12 +43,12 @@ const drive = google.drive({
 
 // 🎯 COMMON FUNCTION
 async function captureAndUpload(url) {
-  const width = 650;
-  const height = 750;
+  const width = 600;      // optimized
+  const height = 600;     // optimized
   const x = 20;
   const y = 450;
   const zoom = 2;
-  const scale = 2.5;
+  const scale = 1.5;      // reduced memory usage
 
   const now = new Date();
   const fileName = `${now.getHours()}-${now.getMinutes()}-${now.getDate()}-${now.getMonth() + 1}.png`;
@@ -66,6 +66,8 @@ async function captureAndUpload(url) {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--single-process",   // 🔥 IMPORTANT
+        "--no-zygote",        // 🔥 IMPORTANT
       ],
     });
 
@@ -81,7 +83,7 @@ async function captureAndUpload(url) {
 
     await page.goto(url, {
       waitUntil: "networkidle2",
-      timeout: 90000,
+      timeout: 60000, // reduced timeout
     });
 
     // Scroll
@@ -94,7 +96,7 @@ async function captureAndUpload(url) {
       document.body.style.zoom = zoomLevel;
     }, zoom);
 
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 1500)); // reduced wait
 
     console.log("📸 Taking screenshot...");
 
@@ -107,8 +109,6 @@ async function captureAndUpload(url) {
         height,
       },
     });
-
-    await browser.close();
 
     console.log("☁️ Uploading to Drive...");
 
@@ -142,8 +142,15 @@ async function captureAndUpload(url) {
 
   } catch (error) {
     console.error("❌ ERROR:", error.message);
-    if (browser) await browser.close();
     throw error;
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();   // 🔥 ALWAYS CLOSE
+      } catch (e) {
+        console.log("⚠️ Browser close error ignored");
+      }
+    }
   }
 }
 
@@ -202,7 +209,7 @@ cron.schedule("*/5 * * * *", async () => {
   }
 });
 
-// ▶️ Start server (VERY IMPORTANT)
+// ▶️ Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
