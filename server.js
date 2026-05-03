@@ -183,9 +183,9 @@ app.get("/capture", async (req, res) => {
 // ⏱️ Scheduler config
 const SCHEDULE_CONFIG = {
   url: "https://chartink.com/dashboard/105781",
-  allowedDays: [0, 1, 2, 3, 4, 5], // Sun–Fri
+  allowedDays: [1, 2, 3, 4, 5], // Sun–Fri
   startHour: 9,
-  endHour: 23,
+  endHour: 16,
 };
 
 // ⏱️ Run every 5 minutes
