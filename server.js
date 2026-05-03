@@ -43,12 +43,12 @@ const drive = google.drive({
 
 // 🎯 COMMON FUNCTION
 async function captureAndUpload(url) {
-  const width = 600;      // optimized
-  const height = 600;     // optimized
+  const width = 650;      // optimized
+  const height = 750;     // optimized
   const x = 20;
   const y = 450;
   const zoom = 2;
-  const scale = 1.5;      // reduced memory usage
+  const scale = 2.5;      // reduced memory usage
 
   const now = new Date();
   const fileName = `${now.getHours()}-${now.getMinutes()}-${now.getDate()}-${now.getMonth() + 1}.png`;
