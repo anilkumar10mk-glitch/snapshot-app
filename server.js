@@ -11,20 +11,24 @@ const PORT = process.env.PORT || 8080;
 // 📁 Google Drive Folder ID
 const FOLDER_ID = "14R6Cj9zqDfbdEDK5YNWF6ul2TzhCpT3a";
 
-// 🔐 OAuth setup
+// 🔐 OAuth using ENV variables
 const oauth2Client = new google.auth.OAuth2(
-  require("./oauth.json").installed.client_id,
-  require("./oauth.json").installed.client_secret,
-  require("./oauth.json").installed.redirect_uris[0]
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
 );
 
-// Load token
-if (fs.existsSync("token.json")) {
-  const token = JSON.parse(fs.readFileSync("token.json"));
-  oauth2Client.setCredentials(token);
-  console.log("✅ Token loaded");
+// 🔐 Load token from ENV (IMPORTANT)
+if (process.env.GOOGLE_TOKEN) {
+  try {
+    const token = JSON.parse(process.env.GOOGLE_TOKEN);
+    oauth2Client.setCredentials(token);
+    console.log("✅ Token loaded from ENV");
+  } catch (err) {
+    console.error("❌ Invalid GOOGLE_TOKEN format");
+  }
 } else {
-  console.log("❌ token.json missing — run auth first");
+  console.log("❌ GOOGLE_TOKEN missing");
 }
 
 const drive = google.drive({
@@ -32,10 +36,8 @@ const drive = google.drive({
   auth: oauth2Client,
 });
 
-
 // 🎯 COMMON FUNCTION
 async function captureAndUpload(url) {
-
   const width = 650;
   const height = 750;
   const x = 20;
@@ -44,13 +46,8 @@ async function captureAndUpload(url) {
   const scale = 2.5;
 
   const now = new Date();
-  const hour = String(now.getHours()).padStart(2, "0");
-  const minute = String(now.getMinutes()).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-
-  const fileName = `${hour}-${minute}-${day}-${month}.png`;
-  const filePath = path.join(__dirname, fileName);
+  const fileName = `${now.getHours()}-${now.getMinutes()}-${now.getDate()}-${now.getMonth() + 1}.png`;
+  const filePath = path.join("/tmp", fileName); // IMPORTANT for Railway
 
   let browser;
 
@@ -61,8 +58,8 @@ async function captureAndUpload(url) {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--single-process"
-      ]
+        "--disable-gpu",
+      ],
     });
 
     const page = await browser.newPage();
@@ -93,16 +90,16 @@ async function captureAndUpload(url) {
     await page.screenshot({
       path: filePath,
       clip: {
-        x: x,
-        y: y,
-        width: width,
-        height: height,
+        x,
+        y,
+        width,
+        height,
       },
     });
 
     await browser.close();
 
-    // Upload
+    // Upload to Drive
     const response = await drive.files.create({
       requestBody: {
         name: fileName,
@@ -115,6 +112,7 @@ async function captureAndUpload(url) {
       fields: "id",
     });
 
+    // Make public
     await drive.permissions.create({
       fileId: response.data.id,
       requestBody: {
@@ -125,17 +123,16 @@ async function captureAndUpload(url) {
 
     const fileUrl = `https://drive.google.com/uc?id=${response.data.id}`;
 
-    fs.unlinkSync(filePath);
+    fs.unlinkSync(filePath); // cleanup
 
     return fileUrl;
 
   } catch (error) {
-    console.error("❌ FULL ERROR:", error);
+    console.error("❌ ERROR:", error);
     if (browser) await browser.close();
     throw error;
   }
 }
-
 
 // 📸 Manual API
 app.get("/capture", async (req, res) => {
@@ -158,19 +155,16 @@ app.get("/capture", async (req, res) => {
   }
 });
 
-
 // ⏱️ Scheduler config
 const SCHEDULE_CONFIG = {
   url: "https://chartink.com/dashboard/105781",
-  allowedDays: [1, 2, 3, 4, 5],
+  allowedDays: [1, 2, 3, 4, 5], // Mon–Fri
   startHour: 9,
   endHour: 16,
 };
 
-
 // ⏱️ Run every 5 minutes
 cron.schedule("*/5 * * * *", async () => {
-
   const now = new Date();
   const day = now.getDay();
   const hour = now.getHours();
@@ -193,9 +187,7 @@ cron.schedule("*/5 * * * *", async () => {
   } catch (err) {
     console.error("❌ Scheduler error:", err.message);
   }
-
 });
-
 
 // ▶️ Start server
 app.listen(PORT, () => {
