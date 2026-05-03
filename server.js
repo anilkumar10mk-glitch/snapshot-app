@@ -8,17 +8,22 @@ const cron = require("node-cron");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// ✅ Health check (IMPORTANT for Railway)
+app.get("/", (req, res) => {
+  res.send("Server is running ✅");
+});
+
 // 📁 Google Drive Folder ID
 const FOLDER_ID = "14R6Cj9zqDfbdEDK5YNWF6ul2TzhCpT3a";
 
-// 🔐 OAuth using ENV variables
+// 🔐 OAuth setup
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.GOOGLE_REDIRECT_URI
 );
 
-// 🔐 Load token from ENV (IMPORTANT)
+// 🔐 Load token from ENV
 if (process.env.GOOGLE_TOKEN) {
   try {
     const token = JSON.parse(process.env.GOOGLE_TOKEN);
@@ -47,13 +52,15 @@ async function captureAndUpload(url) {
 
   const now = new Date();
   const fileName = `${now.getHours()}-${now.getMinutes()}-${now.getDate()}-${now.getMonth() + 1}.png`;
-  const filePath = path.join("/tmp", fileName); // IMPORTANT for Railway
+  const filePath = path.join("/tmp", fileName);
 
   let browser;
 
   try {
+    console.log("🌐 Launching browser...");
+
     browser = await puppeteer.launch({
-      headless: true,
+      headless: "new",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -69,6 +76,8 @@ async function captureAndUpload(url) {
       height,
       deviceScaleFactor: scale,
     });
+
+    console.log("🌍 Opening URL:", url);
 
     await page.goto(url, {
       waitUntil: "networkidle2",
@@ -87,6 +96,8 @@ async function captureAndUpload(url) {
 
     await new Promise((r) => setTimeout(r, 2000));
 
+    console.log("📸 Taking screenshot...");
+
     await page.screenshot({
       path: filePath,
       clip: {
@@ -99,7 +110,8 @@ async function captureAndUpload(url) {
 
     await browser.close();
 
-    // Upload to Drive
+    console.log("☁️ Uploading to Drive...");
+
     const response = await drive.files.create({
       requestBody: {
         name: fileName,
@@ -112,7 +124,6 @@ async function captureAndUpload(url) {
       fields: "id",
     });
 
-    // Make public
     await drive.permissions.create({
       fileId: response.data.id,
       requestBody: {
@@ -123,12 +134,14 @@ async function captureAndUpload(url) {
 
     const fileUrl = `https://drive.google.com/uc?id=${response.data.id}`;
 
-    fs.unlinkSync(filePath); // cleanup
+    fs.unlinkSync(filePath);
+
+    console.log("✅ Upload complete:", fileUrl);
 
     return fileUrl;
 
   } catch (error) {
-    console.error("❌ ERROR:", error);
+    console.error("❌ ERROR:", error.message);
     if (browser) await browser.close();
     throw error;
   }
@@ -158,7 +171,7 @@ app.get("/capture", async (req, res) => {
 // ⏱️ Scheduler config
 const SCHEDULE_CONFIG = {
   url: "https://chartink.com/dashboard/105781",
-  allowedDays: [0, 1, 2, 3, 4, 5], // Mon–Fri
+  allowedDays: [0, 1, 2, 3, 4, 5], // Sun–Fri
   startHour: 9,
   endHour: 23,
 };
@@ -189,7 +202,7 @@ cron.schedule("*/5 * * * *", async () => {
   }
 });
 
-// ▶️ Start server
+// ▶️ Start server (VERY IMPORTANT)
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
