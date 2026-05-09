@@ -64,17 +64,18 @@ const fileName = `${istTime.getHours()}-${istTime.getMinutes()}-${istTime.getDat
   try {
     console.log("🌐 Launching browser...");
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",   // 🔥 IMPORTANT
-        "--no-zygote",        // 🔥 IMPORTANT
-      ],
-    });
+browser = await puppeteer.launch({
+  headless: "new",
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--single-process",
+    "--no-zygote",
+  ],
+});
 
     const page = await browser.newPage();
 
